@@ -60,9 +60,9 @@ function Login() {
         if (from) {
           navigate(from, { replace: true });
         } else if (data.user.role === "admin") {
-          navigate("/admin-dashboard", { replace: true });
+          navigate("/", { replace: true });
         } else {
-          navigate("/my-complaints", { replace: true });
+          navigate("/", { replace: true });
         }
       }, 900);
     } catch (error) {
