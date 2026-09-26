@@ -1,5 +1,51 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import api from "../api/client";
+
+const CATEGORY_LIST = [
+  {
+    name: "Electricity",
+    displayName: "Electricity",
+    icon: "💡",
+    bg: "bg-yellow-100",
+    desc: "Report power cuts, electrical problems, fan, light and other electricity-related issues.",
+  },
+  {
+    name: "Plumbing",
+    displayName: "Plumbing",
+    icon: "🚰",
+    bg: "bg-blue-100",
+    desc: "Report water leakage, water shortage, pipe damage and other plumbing issues.",
+  },
+  {
+    name: "Network/WiFi",
+    displayName: "Wi-Fi / Network",
+    icon: "📶",
+    bg: "bg-purple-100",
+    desc: "Report WiFi connectivity problems, slow internet and network connection issues.",
+  },
+  {
+    name: "Carpenter",
+    displayName: "Carpenter",
+    icon: "🪚",
+    bg: "bg-orange-100",
+    desc: "Report issues with doors, cupboards, hangers, furniture and other wooden items.",
+  },
+  {
+    name: "Cleaning",
+    displayName: "Cleaning",
+    icon: "🧹",
+    bg: "bg-green-100",
+    desc: "Report room cleaning, bathroom cleaning, garbage and other cleanliness-related issues.",
+  },
+  {
+    name: "Food",
+    displayName: "Food",
+    icon: "🍱",
+    bg: "bg-red-100",
+    desc: "Report food quality, quantity, hygiene, delivery and other food-related issues.",
+  },
+];
 
 function Home() {
   const navigate = useNavigate();
@@ -11,24 +57,45 @@ function Home() {
   });
 
   const [loadingStats, setLoadingStats] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    const checkRole = () => {
+      try {
+        const storedUser = localStorage.getItem("user");
+        if (storedUser) {
+          const userObj = JSON.parse(storedUser);
+          setIsAdmin(userObj?.role === "admin");
+        } else {
+          setIsAdmin(false);
+        }
+      } catch {
+        setIsAdmin(false);
+      }
+    };
+
+    checkRole();
+    window.addEventListener("storage", checkRole);
+    window.addEventListener("userChanged", checkRole);
+
+    return () => {
+      window.removeEventListener("storage", checkRole);
+      window.removeEventListener("userChanged", checkRole);
+    };
+  }, []);
 
   // ================= FETCH COMPLAINT STATISTICS =================
 
   const fetchStats = async () => {
     try {
-      const response = await fetch(
-        "http://localhost:5000/api/complaints/stats"
-      );
+      const response = await api.get("/complaints/stats");
+      const data = response.data;
 
-      const data = await response.json();
-
-      if (response.ok) {
-        setStats({
-          totalComplaints: data.totalComplaints || 0,
-          resolvedComplaints: data.resolvedComplaints || 0,
-          resolutionRate: data.resolutionRate || 0,
-        });
-      }
+      setStats({
+        totalComplaints: data.totalComplaints || 0,
+        resolvedComplaints: data.resolvedComplaints || 0,
+        resolutionRate: data.resolutionRate || 0,
+      });
     } catch (error) {
       console.error("Error fetching statistics:", error);
     } finally {
@@ -87,21 +154,30 @@ function Home() {
               </p>
 
               <div className="flex flex-wrap gap-4">
+                {isAdmin ? (
+                  <button
+                    onClick={() => navigate("/admin-dashboard")}
+                    className="bg-white text-indigo-700 px-8 py-3 rounded-full font-bold shadow-lg hover:scale-105 transition"
+                  >
+                    Admin Dashboard
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => navigate("/complaint")}
+                      className="bg-white text-indigo-700 px-8 py-3 rounded-full font-bold shadow-lg hover:scale-105 transition"
+                    >
+                      Submit a Complaint
+                    </button>
 
-                <button
-                  onClick={() => navigate("/complaint")}
-                  className="bg-white text-indigo-700 px-8 py-3 rounded-full font-bold shadow-lg hover:scale-105 transition"
-                >
-                  Submit a Complaint
-                </button>
-
-                <button
-                  onClick={() => navigate("/track-complaint")}
-                  className="border-2 border-white text-white px-8 py-3 rounded-full font-bold hover:bg-white hover:text-indigo-700 transition"
-                >
-                  Track Complaint
-                </button>
-
+                    <button
+                      onClick={() => navigate("/my-complaints")}
+                      className="border-2 border-white text-white px-8 py-3 rounded-full font-bold hover:bg-white hover:text-indigo-700 transition"
+                    >
+                      My Complaints
+                    </button>
+                  </>
+                )}
               </div>
 
             </div>
@@ -256,7 +332,7 @@ function Home() {
           <div className="text-center mb-14">
 
             <p className="text-indigo-600 uppercase tracking-[3px] font-semibold">
-              Report An Issue
+              {isAdmin ? "Complaint Categories" : "Report An Issue"}
             </p>
 
             <h2 className="text-4xl md:text-5xl font-black text-gray-900 mt-3">
@@ -264,200 +340,71 @@ function Home() {
             </h2>
 
             <p className="text-gray-500 mt-4 text-lg">
-              Select a category and report your issue easily.
+              {isAdmin
+                ? "Active complaint categories monitored and managed across the system."
+                : "Select a category and report your issue easily."}
             </p>
 
           </div>
 
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-7">
+            {CATEGORY_LIST.map((cat) => {
+              if (isAdmin) {
+                return (
+                  <div
+                    key={cat.name}
+                    className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 cursor-default select-none"
+                  >
+                    <div
+                      className={`w-16 h-16 ${cat.bg} rounded-2xl flex items-center justify-center text-3xl mb-6`}
+                    >
+                      {cat.icon}
+                    </div>
 
+                    <h3 className="text-2xl font-bold mb-3 text-gray-900">
+                      {cat.displayName || cat.name}
+                    </h3>
 
-            {/* ELECTRICITY */}
+                    <p className="text-gray-500 leading-relaxed">
+                      {cat.desc}
+                    </p>
+                  </div>
+                );
+              }
 
-            <div className="bg-white p-8 rounded-2xl shadow-sm hover:shadow-2xl hover:-translate-y-1 transition duration-300 border border-gray-100">
+              return (
+                <div
+                  key={cat.name}
+                  className="bg-white p-8 rounded-2xl shadow-sm hover:shadow-2xl hover:-translate-y-1 transition duration-300 border border-gray-100"
+                >
+                  <div
+                    className={`w-16 h-16 ${cat.bg} rounded-2xl flex items-center justify-center text-3xl mb-6`}
+                  >
+                    {cat.icon}
+                  </div>
 
-              <div className="w-16 h-16 bg-yellow-100 rounded-2xl flex items-center justify-center text-3xl mb-6">
-                💡
-              </div>
+                  <h3 className="text-2xl font-bold mb-3">
+                    {cat.displayName || cat.name}
+                  </h3>
 
-              <h3 className="text-2xl font-bold mb-3">
-                Electricity
-              </h3>
+                  <p className="text-gray-500 leading-relaxed">
+                    {cat.desc}
+                  </p>
 
-              <p className="text-gray-500 leading-relaxed">
-                Report power cuts, electrical problems, fan, light and
-                other electricity-related issues.
-              </p>
-
-              <button
-                onClick={() =>
-                  navigate("/complaint", {
-                    state: { category: "Electricity" },
-                  })
-                }
-                className="text-indigo-600 font-semibold mt-6 hover:underline"
-              >
-                Report Issue →
-              </button>
-
-            </div>
-
-
-            {/* PLUMBING */}
-
-            <div className="bg-white p-8 rounded-2xl shadow-sm hover:shadow-2xl hover:-translate-y-1 transition duration-300 border border-gray-100">
-
-              <div className="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center text-3xl mb-6">
-                🚰
-              </div>
-
-              <h3 className="text-2xl font-bold mb-3">
-                Plumbing
-              </h3>
-
-              <p className="text-gray-500 leading-relaxed">
-                Report water leakage, water shortage, pipe damage and
-                other plumbing issues.
-              </p>
-
-              <button
-                onClick={() =>
-                  navigate("/complaint", {
-                    state: { category: "Plumbing" },
-                  })
-                }
-                className="text-indigo-600 font-semibold mt-6 hover:underline"
-              >
-                Report Issue →
-              </button>
-
-            </div>
-
-
-            {/* NETWORK */}
-
-            <div className="bg-white p-8 rounded-2xl shadow-sm hover:shadow-2xl hover:-translate-y-1 transition duration-300 border border-gray-100">
-
-              <div className="w-16 h-16 bg-purple-100 rounded-2xl flex items-center justify-center text-3xl mb-6">
-                📶
-              </div>
-
-              <h3 className="text-2xl font-bold mb-3">
-                Network / WiFi
-              </h3>
-
-              <p className="text-gray-500 leading-relaxed">
-                Report WiFi connectivity problems, slow internet and
-                network connection issues.
-              </p>
-
-              <button
-                onClick={() =>
-                  navigate("/complaint", {
-                    state: { category: "Network/WiFi" },
-                  })
-                }
-                className="text-indigo-600 font-semibold mt-6 hover:underline"
-              >
-                Report Issue →
-              </button>
-
-            </div>
-
-
-            {/* CARPENTER */}
-
-            <div className="bg-white p-8 rounded-2xl shadow-sm hover:shadow-2xl hover:-translate-y-1 transition duration-300 border border-gray-100">
-
-              <div className="w-16 h-16 bg-orange-100 rounded-2xl flex items-center justify-center text-3xl mb-6">
-                🪚
-              </div>
-
-              <h3 className="text-2xl font-bold mb-3">
-                Carpenter
-              </h3>
-
-              <p className="text-gray-500 leading-relaxed">
-                Report issues with doors, cupboards, hangers, furniture
-                and other wooden items.
-              </p>
-
-              <button
-                onClick={() =>
-                  navigate("/complaint", {
-                    state: { category: "Carpenter" },
-                  })
-                }
-                className="text-indigo-600 font-semibold mt-6 hover:underline"
-              >
-                Report Issue →
-              </button>
-
-            </div>
-
-
-            {/* CLEANING */}
-
-            <div className="bg-white p-8 rounded-2xl shadow-sm hover:shadow-2xl hover:-translate-y-1 transition duration-300 border border-gray-100">
-
-              <div className="w-16 h-16 bg-green-100 rounded-2xl flex items-center justify-center text-3xl mb-6">
-                🧹
-              </div>
-
-              <h3 className="text-2xl font-bold mb-3">
-                Cleaning
-              </h3>
-
-              <p className="text-gray-500 leading-relaxed">
-                Report room cleaning, bathroom cleaning, garbage and
-                other cleanliness-related issues.
-              </p>
-
-              <button
-                onClick={() =>
-                  navigate("/complaint", {
-                    state: { category: "Cleaning" },
-                  })
-                }
-                className="text-indigo-600 font-semibold mt-6 hover:underline"
-              >
-                Report Issue →
-              </button>
-
-            </div>
-
-
-            {/* FOOD */}
-
-            <div className="bg-white p-8 rounded-2xl shadow-sm hover:shadow-2xl hover:-translate-y-1 transition duration-300 border border-gray-100">
-
-              <div className="w-16 h-16 bg-red-100 rounded-2xl flex items-center justify-center text-3xl mb-6">
-                🍱
-              </div>
-
-              <h3 className="text-2xl font-bold mb-3">
-                Food
-              </h3>
-
-              <p className="text-gray-500 leading-relaxed">
-                Report food quality, quantity, hygiene, delivery and
-                other food-related issues.
-              </p>
-
-              <button
-                onClick={() =>
-                  navigate("/complaint", {
-                    state: { category: "Food" },
-                  })
-                }
-                className="text-indigo-600 font-semibold mt-6 hover:underline"
-              >
-                Report Issue →
-              </button>
-
-            </div>
-
+                  <button
+                    onClick={() =>
+                      navigate("/complaint", {
+                        state: { category: cat.name },
+                      })
+                    }
+                    className="text-indigo-600 font-semibold mt-6 hover:underline inline-block"
+                  >
+                    Report Issue →
+                  </button>
+                </div>
+              );
+            })}
           </div>
         </div>
       </section>
@@ -527,11 +474,11 @@ function Home() {
               </div>
 
               <h3 className="text-xl font-bold mb-3">
-                Track Progress
+                My Complaints Status
               </h3>
 
               <p className="text-gray-500">
-                Track the current status of your complaint at any time.
+                View real-time updates and status in your My Complaints dashboard.
               </p>
 
             </div>
@@ -732,10 +679,10 @@ function Home() {
           </p>
 
           <button
-            onClick={() => navigate("/complaint")}
+            onClick={() => navigate(isAdmin ? "/admin-dashboard" : "/complaint")}
             className="bg-white text-indigo-700 px-8 py-3 rounded-full font-bold hover:scale-105 transition"
           >
-            Submit Your Complaint
+            {isAdmin ? "Admin Dashboard" : "Submit Your Complaint"}
           </button>
 
         </div>

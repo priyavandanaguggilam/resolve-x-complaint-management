@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
+import api from "../api/client";
 
 function ForgotPassword() {
   const navigate = useNavigate();
@@ -10,12 +11,11 @@ function ForgotPassword() {
   const [confirmPassword, setConfirmPassword] = useState("");
 
   const [showNewPassword, setShowNewPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] =
-    useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const [notification, setNotification] = useState("");
-  const [notificationType, setNotificationType] =
-    useState("success");
+  const [notificationType, setNotificationType] = useState("success");
 
   const showNotification = (message, type = "success") => {
     setNotification(message);
@@ -23,7 +23,7 @@ function ForgotPassword() {
 
     setTimeout(() => {
       setNotification("");
-    }, 3000);
+    }, 3500);
   };
 
   const handleResetPassword = async (e) => {
@@ -39,197 +39,142 @@ function ForgotPassword() {
       return;
     }
 
+    if (newPassword.length < 6) {
+      showNotification("Password must be at least 6 characters long", "error");
+      return;
+    }
+
     try {
-      const response = await fetch(
-        "http://localhost:5000/api/auth/reset-password",
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            email,
-            newPassword,
-          }),
-        }
+      setLoading(true);
+
+      const response = await api.put("/auth/reset-password", {
+        email: email.trim().toLowerCase(),
+        newPassword,
+      });
+
+      showNotification(
+        response.data?.message || "Password reset successful! Redirecting...",
+        "success"
       );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        showNotification(
-          data.message || "Password reset failed",
-          "error"
-        );
-        return;
-      }
-
-      showNotification("Password reset successful!");
 
       setTimeout(() => {
         navigate("/login");
-      }, 1000);
+      }, 1500);
     } catch (error) {
       console.error("Reset password error:", error);
-
-      showNotification(
-        "Unable to connect to server",
-        "error"
-      );
+      const errMsg =
+        error.response?.data?.message || "Password reset failed. Please try again.";
+      showNotification(errMsg, "error");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-r from-indigo-700 via-purple-700 to-cyan-600 flex items-center justify-center px-6">
-
-      {/* Notification */}
+    <div className="min-h-screen bg-gradient-to-r from-indigo-700 via-purple-700 to-cyan-600 flex items-center justify-center px-6 py-12">
       {notification && (
         <div
-          className={`fixed top-5 right-5 z-50 px-6 py-3 rounded-xl shadow-lg font-semibold text-white ${
-            notificationType === "error"
-              ? "bg-red-600"
-              : "bg-green-600"
+          className={`fixed top-5 right-5 z-50 px-6 py-4 rounded-2xl shadow-xl font-semibold text-white flex items-center gap-3 ${
+            notificationType === "error" ? "bg-red-600" : "bg-emerald-600"
           }`}
         >
-          {notificationType === "error" ? "✕" : "✓"}{" "}
-          {notification}
+          <span>{notificationType === "error" ? "✕" : "✓"}</span>
+          <span>{notification}</span>
         </div>
       )}
 
-      <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl p-8">
-
-        {/* Logo */}
+      <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl p-8 sm:p-10">
         <div className="flex justify-center mb-5">
-          <div className="w-14 h-14 rounded-full bg-gradient-to-r from-indigo-600 via-purple-600 to-cyan-500 flex items-center justify-center shadow-lg">
-            <span className="text-white text-xl font-bold">
-              RX
-            </span>
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-r from-indigo-600 via-purple-600 to-cyan-500 flex items-center justify-center shadow-lg">
+            <span className="text-white text-xl font-black">RX</span>
           </div>
         </div>
 
-        {/* Heading */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-black text-gray-900">
-            Reset Password
-          </h1>
-
-          <p className="text-gray-500 mt-2">
-            Create a new password for your account
+          <h1 className="text-3xl font-black text-slate-900">Reset Password</h1>
+          <p className="text-slate-500 mt-2 text-sm">
+            Enter your registered email and choose a new password
           </p>
         </div>
 
-        {/* Reset Password Form */}
-        <form onSubmit={handleResetPassword}>
-
-          {/* Email */}
-          <div className="mb-5">
-            <label className="block text-gray-700 font-semibold mb-2">
-              Email
+        <form onSubmit={handleResetPassword} className="space-y-4">
+          <div>
+            <label className="block text-slate-700 font-semibold mb-1 text-sm">
+              Registered Email
             </label>
-
             <input
               type="email"
-              placeholder="Enter your registered email"
+              placeholder="e.g. rahul@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full px-4 py-3 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 text-slate-800"
+              required
             />
           </div>
 
-          {/* New Password */}
-          <div className="mb-5">
-            <label className="block text-gray-700 font-semibold mb-2">
+          <div>
+            <label className="block text-slate-700 font-semibold mb-1 text-sm">
               New Password
             </label>
-
             <div className="relative">
               <input
-                type={
-                  showNewPassword ? "text" : "password"
-                }
-                placeholder="Enter new password"
+                type={showNewPassword ? "text" : "password"}
+                placeholder="At least 6 characters"
                 value={newPassword}
-                onChange={(e) =>
-                  setNewPassword(e.target.value)
-                }
-                className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500"
+                onChange={(e) => setNewPassword(e.target.value)}
+                className="w-full px-4 py-3 pr-12 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 text-slate-800"
+                required
               />
-
               <button
                 type="button"
-                onClick={() =>
-                  setShowNewPassword(!showNewPassword)
-                }
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-black"
+                onClick={() => setShowNewPassword(!showNewPassword)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-600 transition"
               >
-                {showNewPassword ? (
-                  <EyeOff size={20} />
-                ) : (
-                  <Eye size={20} />
-                )}
+                {showNewPassword ? <EyeOff size={20} /> : <Eye size={20} />}
               </button>
             </div>
           </div>
 
-          {/* Confirm Password */}
-          <div className="mb-6">
-            <label className="block text-gray-700 font-semibold mb-2">
-              Confirm Password
+          <div>
+            <label className="block text-slate-700 font-semibold mb-1 text-sm">
+              Confirm New Password
             </label>
-
             <div className="relative">
               <input
-                type={
-                  showConfirmPassword
-                    ? "text"
-                    : "password"
-                }
-                placeholder="Confirm new password"
+                type={showConfirmPassword ? "text" : "password"}
+                placeholder="Re-enter new password"
                 value={confirmPassword}
-                onChange={(e) =>
-                  setConfirmPassword(e.target.value)
-                }
-                className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500"
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="w-full px-4 py-3 pr-12 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 text-slate-800"
+                required
               />
-
               <button
                 type="button"
-                onClick={() =>
-                  setShowConfirmPassword(
-                    !showConfirmPassword
-                  )
-                }
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-black"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-600 transition"
               >
-                {showConfirmPassword ? (
-                  <EyeOff size={20} />
-                ) : (
-                  <Eye size={20} />
-                )}
+                {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
               </button>
             </div>
           </div>
 
-          {/* Reset Button */}
           <button
             type="submit"
-            className="w-full bg-gradient-to-r from-indigo-600 to-cyan-500 text-white py-3 rounded-xl font-bold shadow-lg hover:scale-[1.02] transition"
+            disabled={loading}
+            className="w-full bg-gradient-to-r from-indigo-600 via-purple-600 to-cyan-500 text-white py-3.5 rounded-xl font-bold shadow-lg hover:scale-[1.01] active:scale-[0.99] transition disabled:opacity-50 mt-2"
           >
-            Reset Password
+            {loading ? "Resetting..." : "Reset Password"}
           </button>
-
         </form>
 
-        {/* Back to Login */}
         <div className="text-center mt-6">
           <Link
             to="/login"
-            className="text-indigo-600 font-semibold hover:underline"
+            className="text-indigo-600 font-bold text-sm hover:underline"
           >
             ← Back to Login
           </Link>
         </div>
-
       </div>
     </div>
   );

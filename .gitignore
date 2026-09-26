@@ -27,3 +27,5 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+*.zip
+ResolveX_src_persistent_login_COMPLETE/

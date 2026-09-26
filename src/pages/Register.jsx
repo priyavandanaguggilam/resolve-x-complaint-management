@@ -1,7 +1,7 @@
-
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
+import api from "../api/client";
 
 function Register() {
   const navigate = useNavigate();
@@ -13,323 +13,219 @@ function Register() {
   const [confirmPassword, setConfirmPassword] = useState("");
 
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] =
-    useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const [notification, setNotification] = useState("");
-  const [notificationType, setNotificationType] =
-    useState("success");
+  const [notificationType, setNotificationType] = useState("success");
 
-  // ============================
-  // SHOW NOTIFICATION
-  // ============================
   const showNotification = (message, type = "success") => {
     setNotification(message);
     setNotificationType(type);
 
     setTimeout(() => {
       setNotification("");
-    }, 2000);
+    }, 3500);
   };
 
-  // ============================
-  // REGISTER
-  // ============================
   const handleRegister = async (e) => {
     e.preventDefault();
 
-    // Required fields
-    if (
-      !name.trim() ||
-      !email.trim() ||
-      !phone ||
-      !password ||
-      !confirmPassword
-    ) {
+    if (!name.trim() || !email.trim() || !phone || !password || !confirmPassword) {
       showNotification("Please fill all fields", "error");
       return;
     }
 
-    // Phone validation
     if (!/^[0-9]{10}$/.test(phone)) {
-      showNotification(
-        "Phone number must contain exactly 10 digits",
-        "error"
-      );
+      showNotification("Phone number must contain exactly 10 digits", "error");
       return;
     }
 
-    // Password validation
     if (password !== confirmPassword) {
       showNotification("Passwords do not match", "error");
       return;
     }
 
+    if (password.length < 6) {
+      showNotification("Password must be at least 6 characters long", "error");
+      return;
+    }
+
     try {
-      const response = await fetch(
-        "http://localhost:5000/api/auth/register",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            name: name.trim(),
-            email: email.trim(),
-            phone,
-            password,
-          }),
-        }
-      );
+      setLoading(true);
 
-      const data = await response.json();
+      await api.post("/auth/register", {
+        name: name.trim(),
+        email: email.trim().toLowerCase(),
+        phone: phone.trim(),
+        password,
+      });
 
-      if (!response.ok) {
-        showNotification(
-          data.message || "Registration failed",
-          "error"
-        );
-        return;
-      }
+      showNotification("Registration successful! Redirecting to login...", "success");
 
-      // Success message
-      showNotification(
-        "Registration successful! Redirecting to Home..."
-      );
-
-      // Clear form
-      setName("");
-      setEmail("");
-      setPhone("");
-      setPassword("");
-      setConfirmPassword("");
-
-      // Redirect to Home
       setTimeout(() => {
-        navigate("/");
-      }, 1500);
+        navigate("/login");
+      }, 1200);
     } catch (error) {
       console.error("Registration error:", error);
-
-      showNotification(
-        "Unable to connect to server",
-        "error"
-      );
+      const errMsg =
+        error.response?.data?.message || "Registration failed. Try again.";
+      showNotification(errMsg, "error");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-r from-indigo-700 via-purple-700 to-cyan-600 flex items-center justify-center px-6 py-10">
-
-      {/* ============================
-          NOTIFICATION
-      ============================ */}
+    <div className="min-h-screen bg-gradient-to-r from-indigo-700 via-purple-700 to-cyan-600 flex items-center justify-center px-6 py-12">
       {notification && (
         <div
-          className={`fixed top-5 right-5 z-50 px-6 py-3 rounded-xl shadow-lg font-semibold text-white transition-all ${
-            notificationType === "error"
-              ? "bg-red-600"
-              : "bg-green-600"
+          className={`fixed top-5 right-5 z-50 px-6 py-4 rounded-2xl shadow-xl font-semibold text-white flex items-center gap-3 ${
+            notificationType === "error" ? "bg-red-600" : "bg-emerald-600"
           }`}
         >
-          {notificationType === "error" ? "✕" : "✓"}{" "}
-          {notification}
+          <span>{notificationType === "error" ? "✕" : "✓"}</span>
+          <span>{notification}</span>
         </div>
       )}
 
-      {/* ============================
-          REGISTER CARD
-      ============================ */}
-      <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl p-8">
-
-        {/* Logo */}
+      <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl p-8 sm:p-10">
         <div className="flex justify-center mb-5">
-          <div className="w-14 h-14 rounded-full bg-gradient-to-r from-indigo-600 via-purple-600 to-cyan-500 flex items-center justify-center shadow-lg">
-            <span className="text-white text-xl font-bold">
-              RX
-            </span>
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-r from-indigo-600 via-purple-600 to-cyan-500 flex items-center justify-center shadow-lg">
+            <span className="text-white text-xl font-black">RX</span>
           </div>
         </div>
 
-        {/* Heading */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-black text-gray-900">
-            Create Account
-          </h1>
-
-          <p className="text-gray-500 mt-2">
-            Join Resolve X and report your issues
+          <h1 className="text-3xl font-black text-slate-900">Create Account</h1>
+          <p className="text-slate-500 mt-2 text-sm">
+            Join Resolve X to easily report and track issues
           </p>
         </div>
 
-        {/* ============================
-            FORM
-        ============================ */}
-        <form onSubmit={handleRegister}>
-
-          {/* Full Name */}
-          <div className="mb-4">
-            <label className="block text-gray-700 font-semibold mb-2">
+        <form onSubmit={handleRegister} className="space-y-4">
+          <div>
+            <label className="block text-slate-700 font-semibold mb-1 text-sm">
               Full Name
             </label>
-
             <input
               type="text"
-              placeholder="Enter your full name"
+              placeholder="e.g. Rahul Sharma"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full px-4 py-3 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 text-slate-800"
+              required
             />
           </div>
 
-          {/* Email */}
-          <div className="mb-4">
-            <label className="block text-gray-700 font-semibold mb-2">
-              Email
+          <div>
+            <label className="block text-slate-700 font-semibold mb-1 text-sm">
+              Email Address
             </label>
-
             <input
               type="email"
-              placeholder="Enter your email"
+              placeholder="e.g. rahul@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full px-4 py-3 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 text-slate-800"
+              required
             />
           </div>
 
-          {/* Phone */}
-          <div className="mb-4">
-            <label className="block text-gray-700 font-semibold mb-2">
-              Phone Number
+          <div>
+            <label className="block text-slate-700 font-semibold mb-1 text-sm">
+              Phone Number (10 Digits)
             </label>
-
             <input
               type="tel"
               inputMode="numeric"
               maxLength={10}
-              placeholder="Enter 10-digit phone number"
+              placeholder="Enter 10-digit number"
               value={phone}
-              onChange={(e) => {
-                const value = e.target.value
-                  .replace(/\D/g, "")
-                  .slice(0, 10);
-
-                setPhone(value);
-              }}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500"
+              onChange={(e) =>
+                setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))
+              }
+              className="w-full px-4 py-3 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 text-slate-800"
+              required
             />
-
-            <p className="text-xs text-gray-400 mt-1">
-              {phone.length}/10 digits
-            </p>
           </div>
 
-          {/* Password */}
-          <div className="mb-4">
-            <label className="block text-gray-700 font-semibold mb-2">
+          <div>
+            <label className="block text-slate-700 font-semibold mb-1 text-sm">
               Password
             </label>
-
             <div className="relative">
               <input
                 type={showPassword ? "text" : "password"}
-                placeholder="Create a password"
+                placeholder="At least 6 characters"
                 value={password}
-                onChange={(e) =>
-                  setPassword(e.target.value)
-                }
-                className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500"
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-4 py-3 pr-12 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 text-slate-800"
+                required
               />
-
               <button
                 type="button"
-                onClick={() =>
-                  setShowPassword(!showPassword)
-                }
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-indigo-600"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-600 transition"
               >
-                {showPassword ? (
-                  <EyeOff size={20} />
-                ) : (
-                  <Eye size={20} />
-                )}
+                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
               </button>
             </div>
           </div>
 
-          {/* Confirm Password */}
-          <div className="mb-6">
-            <label className="block text-gray-700 font-semibold mb-2">
+          <div>
+            <label className="block text-slate-700 font-semibold mb-1 text-sm">
               Confirm Password
             </label>
-
             <div className="relative">
               <input
-                type={
-                  showConfirmPassword
-                    ? "text"
-                    : "password"
-                }
-                placeholder="Confirm your password"
+                type={showConfirmPassword ? "text" : "password"}
+                placeholder="Re-enter password"
                 value={confirmPassword}
-                onChange={(e) =>
-                  setConfirmPassword(e.target.value)
-                }
-                className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500"
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="w-full px-4 py-3 pr-12 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 text-slate-800"
+                required
               />
-
               <button
                 type="button"
-                onClick={() =>
-                  setShowConfirmPassword(
-                    !showConfirmPassword
-                  )
-                }
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-indigo-600"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-600 transition"
               >
-                {showConfirmPassword ? (
-                  <EyeOff size={20} />
-                ) : (
-                  <Eye size={20} />
-                )}
+                {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
               </button>
             </div>
           </div>
 
-          {/* Register Button */}
           <button
             type="submit"
-            className="w-full bg-gradient-to-r from-indigo-600 to-cyan-500 text-white py-3 rounded-xl font-bold shadow-lg hover:scale-[1.02] transition"
+            disabled={loading}
+            className="w-full bg-gradient-to-r from-indigo-600 via-purple-600 to-cyan-500 text-white py-3.5 rounded-xl font-bold shadow-lg hover:scale-[1.01] active:scale-[0.99] transition disabled:opacity-50 mt-2"
           >
-            Create Account
+            {loading ? "Creating account..." : "Create Account"}
           </button>
         </form>
 
-        {/* Login */}
-        <p className="text-center text-gray-500 mt-7">
+        <p className="text-center text-slate-500 mt-6 text-sm">
           Already have an account?{" "}
           <Link
             to="/login"
-            className="text-indigo-600 font-semibold hover:underline"
+            className="text-indigo-600 font-bold hover:underline"
           >
             Login
           </Link>
         </p>
 
-        {/* Back Home */}
-        <div className="text-center mt-4">
+        <div className="text-center mt-3">
           <Link
             to="/"
-            className="text-gray-500 hover:text-indigo-600"
+            className="text-slate-400 hover:text-indigo-600 text-xs font-semibold transition"
           >
             ← Back to Home
           </Link>
         </div>
-
       </div>
     </div>
   );
 }
 
 export default Register;
-

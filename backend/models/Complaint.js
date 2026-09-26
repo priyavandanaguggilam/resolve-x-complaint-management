@@ -29,18 +29,56 @@ const complaintSchema = new mongoose.Schema(
     category: {
       type: String,
       required: true,
+      trim: true,
     },
 
     description: {
       type: String,
       required: true,
+      trim: true,
+    },
+
+    priority: {
+      type: String,
+      enum: ["Low", "Medium", "High", "Critical"],
+      default: "Medium",
     },
 
     status: {
       type: String,
-      enum: ["Pending", "In Progress", "Resolved"],
+      enum: [
+        "Submitted",
+        "Pending",
+        "Under Review",
+        "In Progress",
+        "Resolved",
+        "Rejected",
+      ],
       default: "Pending",
     },
+
+    adminRemarks: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
+    statusHistory: [
+      {
+        status: {
+          type: String,
+          required: true,
+        },
+        changedAt: {
+          type: Date,
+          default: Date.now,
+        },
+        remarks: {
+          type: String,
+          default: "",
+        },
+      },
+    ],
   },
   {
     timestamps: true,

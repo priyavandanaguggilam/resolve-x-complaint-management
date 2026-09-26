@@ -1,6 +1,6 @@
 const jwt = require("jsonwebtoken");
 
-const SECRET_KEY = "resolveX_secret_key";
+const SECRET_KEY = process.env.JWT_SECRET || "resolveX_secret_key";
 
 // Verify logged-in user
 const verifyToken = (req, res, next) => {
